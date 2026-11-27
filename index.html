@@ -19,6 +19,14 @@ body{margin:0;box-sizing:border-box;background:var(--bg);color:var(--ink);font-f
 .b.sw:active{background:var(--pink)}
 .c2{display:none}#pad[data-ch="2"] .c2{display:flex}#pad .c2.grp{width:100%;justify-content:center}.b.c2{height:52px;width:84px}.b.ab{border-color:var(--gold)}
 .b:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+#joy,.mg{display:none}
+#joy{position:relative;width:128px;height:128px;border-radius:50%;border:3px solid var(--teal);background:rgba(42,29,69,.7);touch-action:none;-webkit-tap-highlight-color:transparent}
+#knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:var(--teal);border:3px solid var(--ink);pointer-events:none}
+.mg{gap:12px;align-items:center}
+.mg .b{font-size:8px}
+#pad[data-m="1"] #joy{display:block}
+#pad[data-m="1"] .mg{display:flex}
+#pad[data-m="1"]>.grp:not(.mg){display:none}
 </style>
 <div id="wrap"><canvas id="c" width="256" height="192" aria-label="Amelia and Audrey's 8-bit Adventure game screen"></canvas></div>
 <p id="help"><b>◀ ▶</b> or A D move · <b>SPACE</b> jump · <b>X</b> swap girl · <b id="hz"></b><b>P</b> pause · <b>M</b> mute</p>
@@ -26,6 +34,8 @@ body{margin:0;box-sizing:border-box;background:var(--bg);color:var(--ink);font-f
   <div class="grp"><button class="b" id="bL" aria-label="Move left">◀</button><button class="b" id="bR" aria-label="Move right">▶</button></div>
   <div class="grp"><button class="b sw" id="bS">SWAP</button><button class="b" id="bJ">JUMP</button></div>
   <div class="grp c2"><button class="b ab" id="bZ">Z POWER</button><button class="b ab" id="bD">DIVE</button><button class="b ab" id="bC">SYNC</button></div>
+  <div id="joy"><div id="knob"></div></div>
+  <div class="grp mg"><button class="b ab" id="bZ2">SEARCH</button><button class="b sw" id="bS2">SWAP</button><button class="b" id="bP2">PAUSE</button></div>
 </div>
 <script>
 'use strict';
@@ -34,7 +44,7 @@ const cv=document.getElementById('c'),g=cv.getContext('2d');
 g.imageSmoothingEnabled=false;
 function fit(){
   const pad=document.getElementById('pad');
-  const reserve=(getComputedStyle(pad).display!=='none'?100:46)+30;
+  const reserve=(getComputedStyle(pad).display!=='none'?(pad.dataset.m==='1'?150:100):46)+30;
   const aw=Math.min(window.innerWidth-40,1100),ah=window.innerHeight-reserve-30;
   let s=Math.min(aw/W,ah/H); if(s>=2)s=Math.floor(s); s=Math.max(s,.75);
   cv.style.width=Math.round(W*s)+'px'; cv.style.height=Math.round(H*s)+'px';
@@ -3232,5 +3242,30 @@ function drawCheat(){
   txt('ENTER: OK   ~: CLOSE',128,114,'#9a8bb5','center',6);
 }
 
+/* mobile joystick for Pet Hunt */
+(function(){
+  const pad=document.getElementById('pad'),joy=document.getElementById('joy'),knob=document.getElementById('knob');
+  let id=null;const R=44,DZ=.28;
+  function setDir(l,r,u,d){
+    if(l&&!IN.l)IN.pl=1; if(r&&!IN.r)IN.pr=1;
+    IN.l=l?1:0;IN.r=r?1:0;IN.j=u?1:0;IN.d=d?1:0;
+  }
+  function move(e){
+    const b=joy.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2;
+    let dx=e.clientX-cx,dy=e.clientY-cy;const len=Math.hypot(dx,dy);
+    if(len>R){dx*=R/len;dy*=R/len;}
+    knob.style.transform='translate('+dx+'px,'+dy+'px)';
+    const t=R*DZ;setDir(dx<-t,dx>t,dy<-t,dy>t);
+  }
+  function end(){id=null;knob.style.transform='';setDir(0,0,0,0);}
+  joy.addEventListener('pointerdown',e=>{e.preventDefault();audioInit();id=e.pointerId;joy.setPointerCapture(id);move(e);});
+  joy.addEventListener('pointermove',e=>{if(e.pointerId===id)move(e);});
+  joy.addEventListener('pointerup',e=>{if(e.pointerId===id)end();});
+  joy.addEventListener('pointercancel',end);
+  bindBtn('bZ2','z');bindBtn('bS2','s');
+  document.getElementById('bP2').addEventListener('pointerdown',e=>{e.preventDefault();IN.pause=1;});
+  let last='';
+  setInterval(()=>{const m=S.mode==='mini'?'1':'0';if(m!==last){last=m;pad.dataset.m=m;if(m==='0')end();fit();}},100);
+})();
 </script>
 </body></html>
